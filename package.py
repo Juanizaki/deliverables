@@ -1,9 +1,11 @@
+# student id: 011028882
+
 # class defining package objects
+
+import datetime
 
 
 class Package:
-    delivery_statuses: list[str] = ["pending", "in progress", "delivered"]
-    EOD: str = "10:00 PM"
 
     def __init__(
         self,
@@ -11,21 +13,46 @@ class Package:
         address: str,
         city: str,
         state: str,
-        zip_code: int,
+        zip: int,
         delivery_deadline: str,
         weight_kg: int,
-        delivery_status: str,
         delivery_note: str,
     ) -> None:
+        # --- fields sourced directly from the csv ---
         self.package_id: int = package_id
+        # address is mutable: package 9's address is corrected mid-simulation
         self.address: str = address
         self.city: str = city
         self.state: str = state
-        self.zip_code: int = zip_code
+        self.zip: int = zip
         self.delivery_deadline: str = delivery_deadline
         self.weight_kg: int = weight_kg
-        self.delivery_status: str = delivery_status
         self.delivery_note: str = delivery_note
+        # --- runtime fields stamped during simulation ---
+        # departure_time is set by assign_packages when the package is loaded onto a truck
+        self.departure_time: datetime.datetime | None = None
+        # delivery_time is set by simulate_truck the moment the package is delivered
+        self.delivery_time: datetime.datetime | None = None
+
+    def deadline_datetime(self, date: datetime.date) -> datetime.datetime:
+        # EOD packages use 10:00 PM so any timed deadline always sorts ahead of them
+        if self.delivery_deadline == "EOD":
+            return datetime.datetime(date.year, date.month, date.day, 22, 0)
+        # parse the "HH:MM AM/PM" string and combine it with the delivery date
+        time = datetime.datetime.strptime(self.delivery_deadline, "%I:%M %p")
+        return datetime.datetime(
+            date.year, date.month, date.day, time.hour, time.minute
+        )
+
+    def status_check(self, query_time: datetime.datetime) -> str:
+        # package has not left the hub yet at query_time
+        if self.departure_time is None or query_time < self.departure_time:
+            return "At Hub"
+        # package has departed but has not yet arrived at its destination
+        if self.delivery_time is None or query_time < self.delivery_time:
+            return "In Transit"
+        # package has been delivered; include the exact delivery time
+        return f"Delivered at {self.delivery_time.strftime('%I:%M %p')}"
 
     def __str__(self):
         return (
@@ -33,50 +60,10 @@ class Package:
             f"{self.address}, "
             f"{self.city}, "
             f"{self.state}, "
-            f"{self.zip_code}, "
+            f"{self.zip}, "
             f"{self.delivery_deadline}, "
             f"{self.weight_kg}, "
-            f"{self.delivery_status}, "
-            f"{self.delivery_note}"
+            f"{self.delivery_note}, "
+            f"{self.departure_time}, "
+            f"{self.delivery_time}"
         )
-
-    def __repr__(self):
-        return (
-            f"Package ID: {self.package_id!r}, "
-            f"Address: {self.address!r}, "
-            f"City: {self.city!r}, "
-            f"State: {self.state!r}, "
-            f"Zip Code: {self.zip_code!r}, "
-            f"Delivery Deadline: {self.delivery_deadline!r}, "
-            f"Weight (kg): {self.weight_kg!r}, "
-            f"Delivery Status: {self.delivery_status!r}, "
-            f"Delivery Note: {self.delivery_note!r}"
-        )
-
-
-# testing
-# package1: Package = Package(
-#     1,
-#     "123 Main St",
-#     "Salt Lake City",
-#     "UT",
-#     84115,
-#     "10:00 am",
-#     10,
-#     "pending",
-#     "on time",
-# )
-# package2: Package = Package(
-#     2,
-#     "321 Third St",
-#     "Salt Lake City",
-#     "UT",
-#     84106,
-#     "11:00 am",
-#     12,
-#     "pending",
-#     "delayed",
-# )
-#
-# print(repr(package1))
-# print(package2)

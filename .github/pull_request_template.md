@@ -1,5 +1,3 @@
-> Pull Request Title Format: **_{Pull-Request-Type}-{Brief Description of changes}_**
-
 # Overview
 <!-- Brief description of this PR -->
 
