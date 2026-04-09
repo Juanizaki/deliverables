@@ -45,11 +45,11 @@ def display_delivery_summary(
     pkg_id: int | None = None,
 ) -> None:
     print(f"\nPackage status at {query_time.strftime('%I:%M %p')}:")
-    print("-" * 125)
+    print("-" * 135)
     print(
-        f"  {'ID':<4} {'Address':<40} {'City':<18} {'Zip':<7} {'Weight(kg)':<12} {'Deadline':<10} {'Status'}"
+        f"  {'ID':<4} {'Address':<40} {'City':<18} {'Zip':<7} {'Weight(kg)':<12} {'Deadline':<10} {'Assignment':<12} {'Status'}"
     )
-    print("-" * 125)
+    print("-" * 135)
     # when pkg_id is provided show only that package; otherwise iterate all 40
     for pid in ([pkg_id] if pkg_id is not None else range(1, 41)):
         pkg = package_table.lookup(pid)
@@ -57,10 +57,18 @@ def display_delivery_summary(
             print(f"  Package {pid} not found")
             continue
         # status_check derives the current state from the package's recorded timestamps
+        # for package 9: show the wrong address when queried before the correction was known
+        address = pkg.address
+        zip_code = pkg.zip
+        if pkg.correction_time is not None and query_time < pkg.correction_time:
+            address = pkg.pre_correction_address
+            zip_code = pkg.pre_correction_zip
+        # format truck number as a display label
+        truck_label = f"Truck {pkg.truck_number}"
         print(
-            f"  {pid:<4} {pkg.address:<40} {pkg.city:<18} {pkg.zip:<7} {pkg.weight_kg:<12} {pkg.delivery_deadline:<10} {pkg.status_check(query_time)}"
+            f"  {pid:<4} {address:<40} {pkg.city:<18} {zip_code:<7} {pkg.weight_kg:<12} {pkg.delivery_deadline:<10} {truck_label:<12} {pkg.status_check(query_time)}"
         )
-    print("-" * 125)
+    print("-" * 135)
     # compute per-truck and total mileage at the query time from each truck's mileage log
     miles = [mileage_at_time(t, query_time) for t in (truck1, truck2, truck3)]
     for i, m in enumerate(miles, 1):
