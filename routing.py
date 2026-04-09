@@ -13,6 +13,7 @@ HUB: str = "4001 S 700 E"
 
 # package constraint constants
 TRUCK2_ONLY: set[int] = {3, 18, 36, 38}
+DELAYED_IDS: set[int] = {6, 25, 28, 32}
 PACKAGE9_ID: int = 9
 PACKAGE9_CORRECT_ADDRESS: str = "410 S State St"
 PACKAGE9_CORRECT_ZIP: int = 84111
@@ -63,7 +64,10 @@ def assign_packages(
             pkg = package_table.lookup(pkg_id)
             # stamp the truck's departure time so status_check knows when this package left the hub
             # the hash table holds a reference to the same object, so no re-insert is needed
+            pkg.truck_number = truck.truck
             pkg.departure_time = truck.departure_time
+            if pkg_id in DELAYED_IDS:
+                pkg.arrival_time = truck.departure_time
             truck.package_list.append(pkg)
 
 
@@ -119,6 +123,9 @@ def simulate_truck(
         if not pkg9_corrected and truck.current_time >= correction_time:
             for pkg in remaining:
                 if pkg.package_id == PACKAGE9_ID:
+                    pkg.pre_correction_address = pkg.address
+                    pkg.pre_correction_zip = pkg.zip
+                    pkg.correction_time = correction_time
                     pkg.address = PACKAGE9_CORRECT_ADDRESS
                     pkg.zip = PACKAGE9_CORRECT_ZIP
                     pkg9_corrected = True
@@ -140,7 +147,7 @@ def run_simulation(
     truck1: Truck, truck2: Truck, truck3: Truck, date: datetime.date
 ) -> None:
     # package 9's correct address becomes known at 10:20 AM per the scenario spec
-    correction_time = datetime.datetime(date.year, date.month, date.day, 10, 20)
+    correction_time = datetime.datetime.combine(date, datetime.time(10, 20))
     # simulate each truck sequentially; routes are independent so order does not affect results
     for truck in (truck1, truck2, truck3):
         simulate_truck(truck, date, correction_time)
