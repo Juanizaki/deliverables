@@ -100,6 +100,7 @@ The supervisor should be able to see, at assigned points, the progress of each t
 ### Requirements
 
 Note: Use only appropriate built-in data structures, except dictionaries. You must design, write, implement, and debug all code that you turn in for this assessment. Code downloaded from the internet or acquired from another student or any other source may not be submitted and will result in automatic failure of this assessment.
+- The hash table can only use lists, sets, or tuples, but dictionaries can be used elsewhere in the project.
 
 A. Develop a hash table, without using any additional libraries or classes, that has an insertion function that takes the package ID as input and inserts each of the following data components into the hash table:
 - delivery address
