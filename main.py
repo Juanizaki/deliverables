@@ -14,11 +14,11 @@ from truck import Truck
 
 def parse_time_input(time: str, date: datetime.date) -> datetime.datetime | None:
     # .upper() normalizes lowercase "am"/"pm" so both "9:00 AM" and "9:00 am" are accepted
-    # two formats are tried to handle input with or without a space before AM/PM
+    # two formats are tried to handle input with or without space before AM/PM
     for fmt in ("%I:%M %p", "%I:%M%p"):
         try:
             parsed = datetime.datetime.strptime(time.upper(), fmt)
-            # combine the parsed time with today's date to produce a full datetime
+            # combine parsed time with todays date to produce full datetime
             return datetime.datetime.combine(date, parsed.time())
         except ValueError:
             continue
@@ -29,10 +29,10 @@ def mileage_at_time(truck: Truck, query_time: datetime.datetime) -> float:
     # truck has not departed yet or has no recorded legs; nothing to report
     if query_time < truck.departure_time or not truck.mileage_log:
         return 0.0
-    # walk the log in reverse so the first match at or before query_time is the correct entry
-    for timestamp, cumulative in reversed(truck.mileage_log):
+    # walk log in reverse so first match at or before query_time is correct entry
+    for timestamp, miles in reversed(truck.mileage_log):
         if timestamp <= query_time:
-            return cumulative
+            return miles
     return 0.0
 
 
@@ -56,20 +56,20 @@ def display_delivery_summary(
         if pkg is None:
             print(f"  Package {pid} not found")
             continue
-        # status_check derives the current state from the package's recorded timestamps
-        # for package 9: show the wrong address when queried before the correction was known
+        # status_check computes current state from package timestamps
+        # for package 9: show wrong address when queried before correction
         address = pkg.address
-        zip_code = pkg.zip
+        zip_code = pkg.zip_code
         if pkg.correction_time is not None and query_time < pkg.correction_time:
             address = pkg.pre_correction_address
             zip_code = pkg.pre_correction_zip
-        # format truck number as a display label
-        truck_label = f"Truck {pkg.truck_number}"
+        # format truck number
+        truck_number = f"Truck {pkg.truck_number}"
         print(
-            f"  {pid:<4} {address:<40} {pkg.city:<18} {zip_code:<7} {pkg.weight_kg:<12} {pkg.delivery_deadline:<10} {truck_label:<12} {pkg.status_check(query_time)}"
+            f"  {pid:<4} {address:<40} {pkg.city:<18} {zip_code:<7} {pkg.weight_kg:<12} {pkg.delivery_deadline:<10} {truck_number:<12} {pkg.status_check(query_time)}"
         )
     print("-" * 135)
-    # compute per-truck and total mileage at the query time from each truck's mileage log
+    # compute per-truck and total mileage at query time from each trucks mileage log
     miles = [mileage_at_time(t, query_time) for t in (truck1, truck2, truck3)]
     for i, m in enumerate(miles, 1):
         print(f"  Truck {i}: {m:.1f} miles")
@@ -79,7 +79,7 @@ def display_delivery_summary(
 
 
 def prompt_time(date: datetime.date) -> datetime.datetime | None:
-    # wraps parse_time_input with user-facing input and an inline validation message
+    # wraps parse_time_input with user-facing input and inline validation
     query_time = parse_time_input(
         input("\nEnter time (e.g. 9:00 AM, 10:30 AM): ").strip(), date
     )
@@ -96,7 +96,7 @@ def cli_loop(
     date: datetime.date,
 ) -> None:
     print("\n=== WGUPS Package Routing System ===")
-    # KeyboardInterrupt (Ctrl+C) is caught so the program exits cleanly
+    # KeyboardInterrupt (Ctrl+C) caught so program exits cleanly
     try:
         while True:
             print(
@@ -110,7 +110,7 @@ def cli_loop(
                 print("\nExiting...")
                 break
             elif choice == "1":
-                # prompt for time first, then validate the package ID before displaying
+                # prompt for time first, then validate package ID before displaying
                 query_time = prompt_time(date)
                 if query_time is None:
                     continue
@@ -143,28 +143,26 @@ def cli_loop(
                     package_table, truck1, truck2, truck3, end_of_day
                 )
             else:
-                print("  Invalid choice. Enter 1, 2, or 3\n")
+                print("  Invalid choice. Enter 1, 2, 3, or 4\n")
     except KeyboardInterrupt:
         print("\nExiting...")
 
 
 def main() -> None:
-    # phase 1: load all data and run the full-day simulation
+    # phase 1: load all data and run full-day simulation
     # run from project root so relative data paths resolve correctly
     load_distance_data("data/addresses.csv", "data/distances.csv")
     package_table = load_packages("data/packages.csv")
-    # use today's date so departure times are anchored to a real calendar date
     date = datetime.date.today()
-    depart_0800 = datetime.datetime.combine(date, datetime.time(8, 0))
-    depart_0905 = datetime.datetime.combine(date, datetime.time(9, 5))
-    truck1 = Truck(truck=1, driver="Juan", departure_time=depart_0800)
-    truck2 = Truck(truck=2, driver="Tony", departure_time=depart_0800)
-    # Juan drives truck 1 first and returns to the hub in time for the 9:05 AM departure for truck 3
-    truck3 = Truck(truck=3, driver="Juan", departure_time=depart_0905)
-    assign_packages(package_table, truck1, truck2, truck3)
-    # simulation must complete before the CLI starts; all delivery times are set here
+    depart = datetime.datetime.combine(date, datetime.time(8, 0))
+    truck1 = Truck(truck=1, driver="Juan", departure_time=depart)
+    truck2 = Truck(truck=2, driver="Tony", departure_time=depart)
+    # truck 3 departure time set dynamically in run_simulation once Juan returns from truck 1
+    truck3 = Truck(truck=3, driver="Juan", departure_time=depart)
+    assign_packages(package_table, truck1, truck2, truck3, date)
+    # simulation must complete before CLI starts; all delivery times are set here
     run_simulation(truck1, truck2, truck3, date)
-    # phase 2: launch the CLI — no further simulation occurs from this point
+    # phase 2: launch CLI
     cli_loop(package_table, truck1, truck2, truck3, date)
 
 
