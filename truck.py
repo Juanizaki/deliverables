@@ -23,7 +23,7 @@ class Truck:
         self.departure_time: datetime.datetime = departure_time
         # current_time starts at departure and advances with each leg during runtime
         self.current_time: datetime.datetime = departure_time
-        # ordered list of (timestamp, cumulative_miles) entries
+        # ordered list of (timestamp, miles) entries
         # used by mileage_at_time() to answer point-in-time mileage queries
         self.mileage_log: list[tuple[datetime.datetime, float]] = []
 
